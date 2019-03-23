@@ -3,7 +3,7 @@
 [Kubernetes](https://kubernetes.io/docs/concepts/overview/what-is-kubernetes/) makes it easy to build and scale [Elasticsearch](http://www.elasticsearch.org/) clusters. 
 
 ### Version
-Elasticsearch version: `6.6.2`.
+Elasticsearch version: `6.4.2`
 
 ### Best Practices
 Before we start, one needs to know that `Elasticsearch` best-practices recommend to separate nodes in three roles:
