@@ -1,63 +1,97 @@
-# Elasticsearch for Kubernetes
+# Elasticsearch on Kubernetes
 
-Kubernetes makes it trivial for anyone to easily build and scale [Elasticsearch](http://www.elasticsearch.org/) clusters. Here, you'll find how to do so.
-Current Elasticsearch version is `1.7.1`.
+[Kubernetes](https://kubernetes.io/docs/concepts/overview/what-is-kubernetes/) makes it easy to build and scale [Elasticsearch](http://www.elasticsearch.org/) clusters. 
 
-Before we start, one needs to know that Elasticsearch best-practices recommend to separate nodes in three roles:
+### Version
+Elasticsearch version: `6.6.2`.
+
+### Best Practices
+Before we start, one needs to know that `Elasticsearch` best-practices recommend to separate nodes in three roles:
 * `Master` nodes - intended for clustering management only, no data, no HTTP API
 * `Client` nodes - intended for client usage, no data, with HTTP API
 * `Data` nodes - intended for storing and indexing your data, no HTTP API
 
 This is enforced throughout this document.
 
-**WARNING** Current pod descriptors use an `emptyDir` for storing data in each data node container. This is meant to be for the sake of simplicity and [should be adapted according to your storage needs](https://kubernetes.io/docs/concepts/storage/persistent-volumes/).
+### Important
+Current `pod` descriptors use an `emptyDir` for storing data in each data node container. This is meant to be for the sake of simplicity and [should be adapted according to your storage needs](https://kubernetes.io/docs/concepts/storage/persistent-volumes/).
 
-## Docker image
+### Docker image
 
-This example uses [this pre-built image](https://github.com/pires/docker-elasticsearch-kubernetes). Feel free to fork and update it to fit your own needs, but keep in mind that you will need to change Kubernetes descriptors accordingly.
+This service uses the [Official Docker Image](https://hub.docker.com/_/elasticsearch) for Elasticsearch
 
-## Deploy
+<h1 class="bt bb">Deploy</h1>
 
-```
+### Service Account
+Create `service-account`
+
+```bash {.copy-clip}
 kubectl create -f staging/elasticsearch/production_cluster/service-account.yaml
+```
+
+### Discovery
+Create `es-discovery`
+```bash {.copy-clip}
 kubectl create -f staging/elasticsearch/production_cluster/es-discovery-svc.yaml
+```
+
+### Service
+Create `es-svc`
+```bash {.copy-clip}
 kubectl create -f staging/elasticsearch/production_cluster/es-svc.yaml
+```
+
+### Master
+Wait until `service-account`, `es-discovery`, and `es-svc` are provisioned then create `es-master`
+
+```bash {.copy-clip}
 kubectl create -f staging/elasticsearch/production_cluster/es-master-rc.yaml
 ```
 
-The [io.fabric8:elasticsearch-cloud-kubernetes](https://github.com/fabric8io/elasticsearch-cloud-kubernetes) plugin requires limited access to the Kubernetes API in order to fetch the list of Elasticsearch endpoints.
-If your cluster has the RBAC authorization mode enabled, create the additional `Role` and `RoleBinding` with:
+### Roll Based Access Control
+ Create `Role` and `RoleBinding` for `RBAC` authorization requirement: [Read the doc](https://cloud.google.com/kubernetes-engine/docs/how-to/role-based-access-control)
 
-```
+```bash {.copy-clip}
 kubectl create -f staging/elasticsearch/rbac.yaml
 ```
 
-Wait until `es-master` is provisioned, and
+### Client
+Wait until `es-master` is provisioned then create `es-client`
 
-```
+```bash {.copy-clip}
 kubectl create -f staging/elasticsearch/production_cluster/es-client-rc.yaml
 ```
 
-Wait until `es-client` is provisioned, and
+### Data
+Wait until `es-client` is provisioned then create `es-data`
 
-```
+```bash {.copy-clip}
 kubectl create -f staging/elasticsearch/production_cluster/es-data-rc.yaml
 ```
 
-Wait until `es-data` is provisioned.
+### Pods
+Wait until `es-data` is provisioned then check `pods` to see if all is up and running
 
-Now, I leave up to you how to validate the cluster, but a first step is to wait for containers to be in `RUNNING` state and check the Elasticsearch master logs:
-
+```bash {.copy-clip}
+kubectl get pods
 ```
-$ kubectl get pods
+
+```bash {.copy-clip}
+# Console output:
 NAME              READY     STATUS    RESTARTS   AGE
 es-client-2ep9o   1/1       Running   0          2m
 es-data-r9tgv     1/1       Running   0          1m
 es-master-vxl6c   1/1       Running   0          6m
 ```
 
+### Logs
+Check `Elasticsearch` master `logs`
+```bash {.copy-clip}
+kubectl logs es-master-vxl6c
 ```
-$ kubectl logs es-master-vxl6c
+
+```bash {.copy-clip}
+# Console output:
 log4j:WARN No such property [maxBackupIndex] in org.apache.log4j.DailyRollingFileAppender.
 log4j:WARN No such property [maxBackupIndex] in org.apache.log4j.DailyRollingFileAppender.
 log4j:WARN No such property [maxBackupIndex] in org.apache.log4j.DailyRollingFileAppender.
@@ -75,23 +109,28 @@ log4j:WARN No such property [maxBackupIndex] in org.apache.log4j.DailyRollingFil
 [2015-08-21 11:02:28,797][INFO ][cluster.service          ] [Arc] added {[Gideon][4EfhWSqaTqikbK4tI7bODA][es-data-r9tgv][inet[/10.244.59.4:9300]]{master=false},}, reason: zen-disco-receive(join from node[[Gideon][4EfhWSqaTqikbK4tI7bODA][es-data-r9tgv][inet[/10.244.59.4:9300]]{master=false}])
 [2015-08-21 11:03:16,822][INFO ][cluster.service          ] [Arc] added {[Venomm][tFYxwgqGSpOejHLG4umRqg][es-client-2ep9o][inet[/10.244.53.2:9300]]{data=false, master=false},}, reason: zen-disco-receive(join from node[[Venomm][tFYxwgqGSpOejHLG4umRqg][es-client-2ep9o][inet[/10.244.53.2:9300]]{data=false, master=false}])
 ```
+Elasticsearch cluster is up and running
 
-As you can assert, the cluster is up and running. Easy, wasn't it?
 
-## Scale
+<h1 class="bt bb">Scale</h1>
 
-Scaling each type of node to handle your cluster is as easy as:
+##### Scale each `node type` to handle your cluster
 
-```
+```bash {.copy-clip}
 kubectl scale --replicas=3 rc es-master
 kubectl scale --replicas=2 rc es-client
 kubectl scale --replicas=2 rc es-data
 ```
 
-Did it work?
 
+##### Verify it worked
+
+```bash {.copy-clip}
+kubectl get pods
 ```
-$ kubectl get pods
+
+```bash {.copy-clip}
+# Console output:
 NAME              READY     STATUS    RESTARTS   AGE
 es-client-2ep9o   1/1       Running   0          4m
 es-client-ye5s1   1/1       Running   0          50s
@@ -102,10 +141,14 @@ es-master-kuwse   1/1       Running   0          52s
 es-master-vxl6c   1/1       Running   0          8m
 ```
 
-Let's take another look of the Elasticsearch master logs:
+##### Let's take another look of the Elasticsearch master logs
 
+```bash {.copy-clip}
+kubectl logs es-master-vxl6c
 ```
-$ kubectl logs es-master-vxl6c
+
+```bash {.copy-clip}
+# Console output:
 log4j:WARN No such property [maxBackupIndex] in org.apache.log4j.DailyRollingFileAppender.
 log4j:WARN No such property [maxBackupIndex] in org.apache.log4j.DailyRollingFileAppender.
 log4j:WARN No such property [maxBackupIndex] in org.apache.log4j.DailyRollingFileAppender.
@@ -128,30 +171,33 @@ log4j:WARN No such property [maxBackupIndex] in org.apache.log4j.DailyRollingFil
 [2015-08-21 11:04:56,803][INFO ][cluster.service          ] [Arc] added {[Thog][vkdEtX3ESfWmhXXf-Wi0_Q][es-data-8az22][inet[/10.244.15.4:9300]]{master=false},}, reason: zen-disco-receive(join from node[[Thog][vkdEtX3ESfWmhXXf-Wi0_Q][es-data-8az22][inet[/10.244.15.4:9300]]{master=false}])
 ```
 
-## Access the service
+<h1 class="bt bb">Access the Elasticsearch service</h1>
 
-*Don't forget* that services in Kubernetes are only accessible from containers in the cluster. For different behavior you should [configure the creation of an external load-balancer](https://kubernetes.io/docs/concepts/services-networking/service/#type-loadbalancer). While it's supported within this example service descriptor, its usage is out of scope of this document, for now.
+**Don't forget** that services in Kubernetes are only accessible from containers in the cluster. For different behavior you should [configure the creation of an external load-balancer](https://kubernetes.io/docs/concepts/services-networking/service/#type-loadbalancer). While it's supported within this example service descriptor, its usage is out of scope of this document, for now.
 
+```bash {.copy-clip}
+kubectl get service elasticsearch
 ```
-$ kubectl get service elasticsearch
+
+```bash {.copy-clip}
 NAME            LABELS                                SELECTOR                              IP(S)          PORT(S)
 elasticsearch   component=elasticsearch,role=client   component=elasticsearch,role=client   10.100.134.2   9200/TCP
 ```
 
+### Connect
 From any host on your cluster (that's running `kube-proxy`), run:
 
-```
+```bash {.copy-clip}
 curl http://10.100.134.2:9200
 ```
 
 You should see something similar to the following:
 
-
 ```json
 {
   "status" : 200,
-  "name" : "Cagliostro",
-  "cluster_name" : "myesdb",
+  "name" : "node-1",
+  "cluster_name" : "es-cluster-1",
   "version" : {
     "number" : "1.7.1",
     "build_hash" : "b88f43fc40b0bcd7f173a1f9ee2e97816de80b19",
@@ -163,10 +209,10 @@ You should see something similar to the following:
 }
 ```
 
-Or if you want to check cluster information:
+### Cluster Info
+Check cluster information:
 
-
-```
+```bash {.copy-clip}
 curl http://10.100.134.2:9200/_cluster/health?pretty
 ```
 
@@ -174,7 +220,7 @@ You should see something similar to the following:
 
 ```json
 {
-  "cluster_name" : "myesdb",
+  "cluster_name" : "es-cluster-1",
   "status" : "green",
   "timed_out" : false,
   "number_of_nodes" : 7,
@@ -189,8 +235,3 @@ You should see something similar to the following:
   "number_of_in_flight_fetch" : 0
 }
 ```
-
-
-<!-- BEGIN MUNGE: GENERATED_ANALYTICS -->
-[![Analytics](https://kubernetes-site.appspot.com/UA-36037335-10/GitHub/examples/elasticsearch/production_cluster/README.md?pixel)]()
-<!-- END MUNGE: GENERATED_ANALYTICS -->

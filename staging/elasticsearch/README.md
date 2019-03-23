@@ -15,7 +15,7 @@ The [pre-built image](https://github.com/pires/docker-elasticsearch-kubernetes) 
 
 Let's kickstart our cluster with 1 instance of Elasticsearch.
 
-```
+```bash {.copy-clip}
 kubectl create -f staging/elasticsearch/service-account.yaml
 kubectl create -f staging/elasticsearch/es-svc.yaml
 kubectl create -f staging/elasticsearch/es-rc.yaml
@@ -24,19 +24,19 @@ kubectl create -f staging/elasticsearch/es-rc.yaml
 The [io.fabric8:elasticsearch-cloud-kubernetes](https://github.com/fabric8io/elasticsearch-cloud-kubernetes) plugin requires limited access to the Kubernetes API in order to fetch the list of Elasticsearch endpoints.
 If your cluster has the RBAC authorization mode enabled, create the additional `Role` and `RoleBinding` with:
 
-```
+```bash {.copy-clip}
 kubectl create -f staging/elasticsearch/rbac.yaml
 ```
 
 Let's see if it worked:
 
-```
+```bash {.copy-clip}
 $ kubectl get pods
 NAME       READY     STATUS    RESTARTS   AGE
 es-q8q2v   1/1       Running   0          2m
 ```
 
-```
+```bash {.copy-clip}
 $ kubectl logs es-q8q2v
 [2017-10-02T11:39:22,347][INFO ][o.e.n.Node               ] [ece3d296-dbd3-46a3-b66c-8b4c282610af] initializing ...
 [2017-10-02T11:39:22,579][INFO ][o.e.e.NodeEnvironment    ] [ece3d296-dbd3-46a3-b66c-8b4c282610af] using [1] data paths, mounts [[/data (/dev/sda1)]], net usable_space [92.5gb], net total_space [94.3gb], spins? [possibly], types [ext4]
@@ -73,13 +73,13 @@ So we have a 1-node Elasticsearch cluster ready to handle some work.
 
 Scaling is as easy as:
 
-```
+```bash {.copy-clip}
 kubectl scale --replicas=3 rc es
 ```
 
 Did it work?
 
-```
+```bash {.copy-clip}
 $ kubectl get pods
 NAME       READY     STATUS    RESTARTS   AGE
 es-95h78   1/1       Running   0          3m
@@ -89,7 +89,7 @@ es-qdcnd   1/1       Running   0          3m
 
 Let's take a look at logs:
 
-```
+```bash {.copy-clip}
 $ kubectl logs es-q8q2v
 [2017-10-02T11:39:22,347][INFO ][o.e.n.Node               ] [ece3d296-dbd3-46a3-b66c-8b4c282610af] initializing ...
 [2017-10-02T11:39:22,579][INFO ][o.e.e.NodeEnvironment    ] [ece3d296-dbd3-46a3-b66c-8b4c282610af] using [1] data paths, mounts [[/data (/dev/sda1)]], net usable_space [92.5gb], net total_space [94.3gb], spins? [possibly], types [ext4]
@@ -129,7 +129,7 @@ So we have a 3-node Elasticsearch cluster ready to handle more work.
 
 *Don't forget* that services in Kubernetes are only acessible from containers in the cluster. For different behavior you should [configure the creation of an external load-balancer](https://kubernetes.io/docs/concepts/services-networking/service/#type-loadbalancer). While it's supported within this example service descriptor, its usage is out of scope of this document, for now.
 
-```
+```bash {.copy-clip}
 $ kubectl get service elasticsearch
 NAME            CLUSTER-IP      EXTERNAL-IP      PORT(S)                         AGE
 elasticsearch   10.47.252.248   35.200.115.240   9200:31394/TCP,9300:30907/TCP   6m
@@ -137,7 +137,7 @@ elasticsearch   10.47.252.248   35.200.115.240   9200:31394/TCP,9300:30907/TCP  
 
 From any host on your cluster (that's running `kube-proxy`), run:
 
-```
+```bash {.copy-clip}
 $ curl 35.200.115.240:9200
 ```
 
@@ -163,7 +163,7 @@ You should see something similar to the following:
 Or if you want to check cluster information:
 
 
-```
+```bash {.copy-clip}
 curl 35.189.128.215:9200/_cluster/health?pretty
 ```
 
@@ -188,7 +188,3 @@ You should see something similar to the following:
   "active_shards_percent_as_number" : 100.0
 }
 ```
-
-<!-- BEGIN MUNGE: GENERATED_ANALYTICS -->
-[![Analytics](https://kubernetes-site.appspot.com/UA-36037335-10/GitHub/examples/elasticsearch/README.md?pixel)]()
-<!-- END MUNGE: GENERATED_ANALYTICS -->
